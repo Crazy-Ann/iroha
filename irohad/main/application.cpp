@@ -159,6 +159,7 @@ void Irohad::initPeerOrderer() {
 
 void Irohad::initOrderingGate() {
   // const set maximum transactions that possible appears in one proposal
+
   auto max_transactions_in_proposal = 10u;
 
   // const set maximum waiting time util emitting new proposal
@@ -166,7 +167,6 @@ void Irohad::initOrderingGate() {
 
   ordering_gate = ordering_init.initOrderingGate(
       wsv, max_transactions_in_proposal, delay_for_new_proposal);
-
   log_->info("[Init] => init ordering gate - [{}]",
              logger::logBool(ordering_gate));
 }
@@ -247,7 +247,7 @@ void Irohad::run() {
   builder.AddListeningPort(
       peer.address, grpc::InsecureServerCredentials(), &port);
   builder.RegisterService(ordering_init.ordering_gate_transport.get());
-  builder.RegisterService(ordering_init.ordering_service.get());
+  builder.RegisterService(ordering_init.ordering_service_transport.get());
   builder.RegisterService(yac_init.consensus_network.get());
   builder.RegisterService(loader_init.service.get());
   internal_server = builder.BuildAndStart();
