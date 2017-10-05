@@ -4,6 +4,7 @@ add_library(irohad-flags
     )
 target_link_libraries(irohad-flags
     gflags
+    logger
     )
 
 add_library(irohad-config

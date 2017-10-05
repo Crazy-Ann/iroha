@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <boost/assert.hpp>
 #include <string>
+#include <sstream>
 
 namespace iroha {
   namespace string {
