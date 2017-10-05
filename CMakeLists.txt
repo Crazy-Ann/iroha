@@ -33,7 +33,7 @@ option(COVERAGE "Enable coverage" OFF)
 option(FUZZING "Build fuzzing binaries" OFF)
 option(IROHA_VERSION "Set version" OFF)
 
-if(VERSION)
+if(IROHA_VERSION)
   add_definitions(-DIROHA_VERSION=${IROHA_VERSION})
 endif()
 
@@ -45,12 +45,12 @@ message(STATUS "-DTESTING=${TESTING}")
 message(STATUS "-DBENCHMARKING=${BENCHMARKING}")
 message(STATUS "-DFUZZING=${FUZZING}")
 message(STATUS "-DCOVERAGE=${COVERAGE}")
+message(STATUS "-DIROHA_VERSION=${IROHA_VERSION}")
 
 SET(IROHA_SCHEMA_DIR "${PROJECT_SOURCE_DIR}/schema")
 include_directories(
   ${PROJECT_SOURCE_DIR}/irohad
   ${PROJECT_SOURCE_DIR}/libs
-  ${PROJECT_SOURCE_DIR}/libs/gsl/include
   ${IROHA_SCHEMA_DIR}
 )
 
