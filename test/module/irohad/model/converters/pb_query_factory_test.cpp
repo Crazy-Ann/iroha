@@ -22,6 +22,7 @@
 
 #include "model/queries/get_roles.hpp"
 #include "model/queries/get_asset_info.hpp"
+#include <iostream>
 
 using namespace iroha::model::converters;
 using namespace iroha::model::generators;
@@ -34,7 +35,9 @@ void runQueryTest(std::shared_ptr<Query> query){
   auto res_query = queryFactory.deserialize(pb_query.value());
   ASSERT_TRUE(res_query.has_value());
   // TODO: overload operator == for queries and replace with it
-  ASSERT_EQ(iroha::hash(*res_query.value()), iroha::hash(*query));
+  auto a = iroha::hash(*res_query.value());
+  auto b = iroha::hash(*query);
+  ASSERT_EQ(a, b);
 }
 
 TEST(PbQueryFactoryTest, SerializeGetAccount){
@@ -86,7 +89,6 @@ TEST(PbQueryFactoryTest, SerializeGetSignatories){
 }
 
 TEST(PbQueryFactoryTest, get_roles){
-
   auto query = QueryGenerator{}.generateGetRoles();
   runQueryTest(query);
 }
