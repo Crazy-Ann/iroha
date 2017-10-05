@@ -94,7 +94,7 @@ namespace iroha {
 
       auto index = std::make_unique<cpp_redis::redis_client>();
       try {
-        index->connect(postgres_.host, postgres_.port);
+        index->connect(redis_.host, redis_.port);
       } catch (const cpp_redis::redis_error &e) {
         log_->error("Connection to Redis broken: {}", e.what());
         return nullptr;
