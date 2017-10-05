@@ -19,6 +19,7 @@
 #define IROHA_STORAGE_IMPL_HPP
 
 #include "ametsuchi/storage.hpp"
+#include "main/config/config.hpp"
 
 #include <cmath>
 #include <shared_mutex>
@@ -33,6 +34,8 @@
 namespace iroha {
   namespace ametsuchi {
 
+    using iroha::config::Config;
+
     struct ConnectionContext {
       ConnectionContext(std::unique_ptr<FlatFile> block_store,
                         std::unique_ptr<cpp_redis::redis_client> index,
@@ -41,8 +44,7 @@ namespace iroha {
           : block_store(std::move(block_store)),
             index(std::move(index)),
             pg_lazy(std::move(pg_lazy)),
-            pg_nontx(std::move(pg_nontx)) {
-      }
+            pg_nontx(std::move(pg_nontx)) {}
 
       std::unique_ptr<FlatFile> block_store;
       std::unique_ptr<cpp_redis::redis_client> index;
@@ -52,16 +54,16 @@ namespace iroha {
 
     class StorageImpl : public Storage {
      protected:
-      static nonstd::optional<ConnectionContext>
-      initConnections(std::string block_store_dir,
-                      std::string redis_host,
-                      std::size_t redis_port,
-                      std::string postgres_options);
+      static nonstd::optional<ConnectionContext> initConnections(
+          const Config::Redis &redis,
+          const Config::Postgres &pg,
+          const Config::BlockStorage &store);
 
      public:
       static std::shared_ptr<StorageImpl> create(
-          std::string block_store_dir, std::string redis_host,
-          std::size_t redis_port, std::string postgres_connection);
+          const Config::Redis &redis,
+          const Config::Postgres &pg,
+          const Config::BlockStorage &store);
 
       std::unique_ptr<TemporaryWsv> createTemporaryWsv() override;
 
@@ -74,25 +76,17 @@ namespace iroha {
       std::shared_ptr<BlockQuery> getBlockQuery() const override;
 
      protected:
-
-      StorageImpl(std::string block_store_dir,
-                  std::string redis_host,
-                  std::size_t redis_port,
-                  std::string postgres_options,
+      StorageImpl(const Config::Redis &redis,
+                  const Config::Postgres &pg,
+                  const Config::BlockStorage &store,
                   std::unique_ptr<FlatFile> block_store,
                   std::unique_ptr<cpp_redis::redis_client> index,
                   std::unique_ptr<pqxx::lazyconnection> wsv_connection,
                   std::unique_ptr<pqxx::nontransaction> wsv_transaction);
 
-      /**
-       * Folder with raw blocks
-       */
-      const std::string block_store_dir_;
-
-      // db info
-      const std::string redis_host_;
-      const std::size_t redis_port_;
-      const std::string postgres_options_;
+      const Config::Redis redis_;
+      const Config::Postgres postgres_;
+      const Config::BlockStorage store_;
 
      private:
       std::unique_ptr<FlatFile> block_store_;

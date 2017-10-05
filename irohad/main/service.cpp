@@ -15,7 +15,9 @@
  * limitations under the License.
  */
 
-#include "main/application.hpp"
+#include "main/service.hpp"
+
+#include <boost/assert.hpp>
 
 using namespace iroha;
 using namespace iroha::ametsuchi;
@@ -28,39 +30,25 @@ using namespace iroha::torii;
 using namespace iroha::model::converters;
 using namespace iroha::consensus::yac;
 
-Irohad::Irohad(const std::string &block_store_dir,
-               const std::string &redis_host,
-               size_t redis_port,
-               const std::string &pg_conn,
-               size_t torii_port,
-               const keypair_t &keypair)
-    : block_store_dir_(block_store_dir),
-      redis_host_(redis_host),
-      redis_port_(redis_port),
-      pg_conn_(pg_conn),
-      torii_port_(torii_port),
-      keypair(keypair) {
-  log_ = logger::log("IROHAD");
+Service::Service(std::unique_ptr<Config> config)
+    : config_(std::move(config)), log_(logger::log("irohad")) {
   log_->info("created");
   initStorage();
 }
 
-Irohad::~Irohad() {
+Service::~Service() {
   if (internal_server) {
     internal_server->Shutdown();
   }
   if (torii_server) {
     torii_server->shutdown();
   }
-  if (internal_thread.joinable()) {
-    internal_thread.join();
-  }
   if (server_thread.joinable()) {
     server_thread.join();
   }
 }
 
-void Irohad::init() {
+void Service::init() {
   initProtoFactories();
   initPeerQuery();
   initPeer();
@@ -78,28 +66,26 @@ void Irohad::init() {
   initQueryService();
 }
 
-void Irohad::initStorage() {
-  storage =
-      StorageImpl::create(block_store_dir_, redis_host_, redis_port_, pg_conn_);
+void Service::initStorage() {
+  storage = StorageImpl::create(config_->redis(), config_->postgres(),
+                                config_->blockStorage());
+
+  BOOST_ASSERT(storage != nullptr);
 
   log_->info("[Init] => storage", logger::logBool(storage));
 }
 
-void Irohad::initProtoFactories() {
+void Service::initProtoFactories() {
   pb_tx_factory = std::make_shared<PbTransactionFactory>();
   pb_query_factory = std::make_shared<PbQueryFactory>();
   pb_query_response_factory = std::make_shared<PbQueryResponseFactory>();
 
+  BOOST_ASSERT(pb_tx_factory != nullptr);
+
   log_->info("[Init] => converters");
 }
 
-void Irohad::initPeerQuery() {
-  wsv = std::make_shared<ametsuchi::PeerQueryWsv>(storage->getWsvQuery());
-
-  log_->info("[Init] => peer query");
-}
-
-void Irohad::initPeer() {
+void Service::initPeer() {
   auto peers = wsv->getLedgerPeers().value();
 
   auto it = std::find_if(peers.begin(), peers.end(), [this](auto peer) {
@@ -115,13 +101,13 @@ void Irohad::initPeer() {
   log_->info("[Init] => peer address is {}", peer.address);
 }
 
-void Irohad::initCryptoProvider() {
+void Service::initCryptoProvider() {
   crypto_verifier = std::make_shared<ModelCryptoProviderImpl>(keypair);
 
   log_->info("[Init] => crypto provider");
 }
 
-void Irohad::initValidators() {
+void Service::initValidators() {
   stateless_validator =
       std::make_shared<StatelessValidatorImpl>(crypto_verifier);
   stateful_validator = std::make_shared<StatefulValidatorImpl>();
@@ -130,21 +116,34 @@ void Irohad::initValidators() {
   log_->info("[Init] => validators");
 }
 
-void Irohad::initOrderingGate() {
-  // const set maximum transactions that possible appears in one proposal
-  auto max_transactions_in_proposal = 10u;
+void Service::initPeerQuery() {
+  wsv = std::make_shared<ametsuchi::PeerQueryWsv>(storage->getWsvQuery());
+  BOOST_ASSERT(wsv != nullptr);
 
-  // const set maximum waiting time util emitting new proposal
-  auto delay_for_new_proposal = 5000u;
+  log_->info("[Init] => peer query");
+}
 
-  ordering_gate = ordering_init.initOrderingGate(
-      wsv, max_transactions_in_proposal, delay_for_new_proposal);
+void Service::initPeerOrderer() {
+  orderer = std::make_shared<PeerOrdererImpl>(wsv);
+  log_->info("[Init] => peer orderer");
+}
+
+void Service::initOrderingGate() {
+  // maximum transactions in proposal
+  const auto max_transactions_in_proposal = 10u;
+
+  // delay before emitting new proposal
+  const auto delay_for_new_proposal = 5000u;
+
+  ordering_gate = ordering_init.initOrderingGate(wsv,
+                                                 max_transactions_in_proposal,
+                                                 delay_for_new_proposal);
 
   log_->info("[Init] => init ordering gate - [{}]",
              logger::logBool(ordering_gate));
 }
 
-void Irohad::initSimulator() {
+void Service::initSimulator() {
   simulator = std::make_shared<Simulator>(ordering_gate,
                                           stateful_validator,
                                           storage,
@@ -154,28 +153,31 @@ void Irohad::initSimulator() {
   log_->info("[Init] => init simulator");
 }
 
-void Irohad::initBlockLoader() {
-  block_loader = loader_init.initBlockLoader(
-      wsv, storage->getBlockQuery(), crypto_verifier);
+void Service::initBlockLoader() {
+  block_loader = loader_init.initBlockLoader(wsv,
+                                             storage->getBlockQuery(),
+                                             crypto_verifier);
 
   log_->info("[Init] => block loader");
 }
 
-void Irohad::initConsensusGate() {
-  consensus_gate = yac_init.initConsensusGate(
-      peer.address, wsv, simulator, block_loader, keypair);
+void Service::initConsensusGate() {
+  consensus_gate = yac_init.initConsensusGate(peer.address,
+                                              orderer,
+                                              simulator,
+                                              block_loader);
 
   log_->info("[Init] => consensus gate");
 }
 
-void Irohad::initSynchronizer() {
+void Service::initSynchronizer() {
   synchronizer = std::make_shared<SynchronizerImpl>(
       consensus_gate, chain_validator, storage, block_loader);
 
   log_->info("[Init] => synchronizer");
 }
 
-void Irohad::initPeerCommunicationService() {
+void Service::initPeerCommunicationService() {
   pcs = std::make_shared<PeerCommunicationServiceImpl>(ordering_gate,
                                                        synchronizer);
 
@@ -188,7 +190,7 @@ void Irohad::initPeerCommunicationService() {
   log_->info("[Init] => pcs");
 }
 
-void Irohad::initTransactionCommandService() {
+void Service::initTransactionCommandService() {
   auto tx_processor =
       std::make_shared<TransactionProcessorImpl>(pcs, stateless_validator);
 
@@ -198,7 +200,7 @@ void Irohad::initTransactionCommandService() {
   log_->info("[Init] => command service");
 }
 
-void Irohad::initQueryService() {
+void Service::initQueryService() {
   auto query_proccessing_factory = std::make_unique<QueryProcessingFactory>(
       storage->getWsvQuery(), storage->getBlockQuery());
 
@@ -211,23 +213,30 @@ void Irohad::initQueryService() {
   log_->info("[Init] => query service");
 }
 
-void Irohad::run() {
+void Service::run() {
   torii_server =
-      std::make_unique<ServerRunner>("0.0.0.0:" + std::to_string(torii_port_));
+      std::make_unique<ServerRunner>(config_->torii().listenAddress());
 
   grpc::ServerBuilder builder;
-  int port = 0;
-  builder.AddListeningPort(
-      peer.address, grpc::InsecureServerCredentials(), &port);
+  int *port = 0;
+  builder.AddListeningPort(config_->torii().listenAddress(),
+                           grpc::InsecureServerCredentials(), port);
+  BOOST_ASSERT(port != nullptr);
+
   builder.RegisterService(ordering_init.ordering_gate_transport.get());
   builder.RegisterService(ordering_init.ordering_service.get());
   builder.RegisterService(yac_init.consensus_network.get());
   builder.RegisterService(loader_init.service.get());
+
   internal_server = builder.BuildAndStart();
   server_thread = std::thread([this] {
     torii_server->run(std::move(command_service), std::move(query_service));
   });
-  log_->info("===> iroha initialized");
+
+  log_->info("===> iroha initialized. torii is on port {}", *port);
+
   torii_server->waitForServersReady();
   internal_server->Wait();
 }
+
+const Config &Service::config() const { return *config_; }

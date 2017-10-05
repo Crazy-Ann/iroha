@@ -20,7 +20,9 @@ function(strictmode target)
 endfunction()
 
 # Creates test "test_name", with "SOURCES" (use string as second argument)
-function(addtest test_name SOURCES)
+function(addtest test_name)
+  set(SOURCES ${ARGN})
+
   if (COVERAGE)
     set(test_xml_output --gtest_output=xml:${REPORT_DIR}/xunit-${test_name}.xml)
   endif ()

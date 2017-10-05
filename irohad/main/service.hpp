@@ -19,6 +19,7 @@
 #define IROHA_APPLICATION_HPP
 
 #include "ametsuchi/impl/storage_impl.hpp"
+#include "main/config/impl/gflags_config.hpp"
 #include "crypto/crypto.hpp"
 #include "logger/logger.hpp"
 #include "main/impl/block_loader_init.hpp"
@@ -46,23 +47,13 @@
 #include "validation/impl/chain_validator_impl.hpp"
 #include "validation/impl/stateful_validator_impl.hpp"
 
-class Irohad {
+using iroha::config::Config;
+
+class Service {
  public:
-  /**
-   * Constructor that initializes common iroha pipeline
-   * @param block_store_dir - folder where blocks will be stored
-   * @param redis_host - host of redis connection
-   * @param redis_port - port of redis connection
-   * @param pg_conn - initialization string for postgre
-   * @param torii_port - port for torii binding
-   * @param peer_number - number of peer in ledger // todo replace with pub key
-   */
-  Irohad(const std::string &block_store_dir,
-         const std::string &redis_host,
-         size_t redis_port,
-         const std::string &pg_conn,
-         size_t torii_port,
-         const iroha::keypair_t &keypair);
+  explicit Service(std::unique_ptr<Config>);
+
+  const Config &config() const;
 
   /**
    * Initialization of whole objects in system
@@ -74,10 +65,12 @@ class Irohad {
    */
   virtual void run();
 
-  virtual ~Irohad();
+  ~Service();
 
  protected:
-  // -----------------------| component initialization |------------------------
+  const std::unique_ptr<Config> config_;
+
+  // ------| component initialization |-------
 
   virtual void initStorage();
 
@@ -107,14 +100,7 @@ class Irohad {
 
   virtual void initQueryService();
 
-  // constructor dependencies
-  std::string block_store_dir_;
-  std::string redis_host_;
-  size_t redis_port_;
-  std::string pg_conn_;
-  size_t torii_port_;
-
-  // ------------------------| internal dependencies |-------------------------
+  // ------| internal dependencies  |-------
 
   // converter factories
   std::shared_ptr<iroha::model::converters::PbTransactionFactory> pb_tx_factory;
@@ -168,13 +154,12 @@ class Irohad {
   iroha::consensus::yac::YacInit yac_init;
   iroha::network::BlockLoaderInit loader_init;
 
-  std::thread internal_thread, server_thread;
+  std::thread server_thread;
 
   logger::Logger log_;
 
  public:
   std::shared_ptr<iroha::ametsuchi::Storage> storage;
-  iroha::keypair_t keypair;
 };
 
 #endif  // IROHA_APPLICATION_HPP

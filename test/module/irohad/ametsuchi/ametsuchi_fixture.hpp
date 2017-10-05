@@ -20,13 +20,17 @@
 
 #include "common/files.hpp"
 #include "logger/logger.hpp"
+#include "main/config/impl/gflags_config.hpp"
 
 #include <gtest/gtest.h>
 #include <cpp_redis/cpp_redis>
 #include <pqxx/pqxx>
+#include "config_fake.hpp"
 
 namespace iroha {
   namespace ametsuchi {
+
+
     /**
      * Class with ametsuchi initialization
      */
@@ -35,24 +39,9 @@ namespace iroha {
       virtual void SetUp() {
         auto log = logger::testLog("AmetsuchiTest");
 
-        mkdir(block_store_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-        auto pg_host = std::getenv("IROHA_POSTGRES_HOST");
-        auto pg_port = std::getenv("IROHA_POSTGRES_PORT");
-        auto pg_user = std::getenv("IROHA_POSTGRES_USER");
-        auto pg_pass = std::getenv("IROHA_POSTGRES_PASSWORD");
-        auto rd_host = std::getenv("IROHA_REDIS_HOST");
-        auto rd_port = std::getenv("IROHA_REDIS_PORT");
-        if (not pg_host) {
-          return;
-        }
-        std::stringstream ss;
-        ss << "host=" << pg_host << " port=" << pg_port << " user=" << pg_user
-           << " password=" << pg_pass;
-        pgopt_ = ss.str();
-        redishost_ = rd_host;
-        redisport_ = std::stoull(rd_port);
-        log->info("host={}, port={}, user={}, password={}", pg_host, pg_port,
-                  pg_user, pg_pass);
+        config_ = std::make_unique<FakeConfig>();
+        mkdir(config_->blockStorage().path.c_str(),
+              S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
       }
       virtual void TearDown() {
         const auto drop = R"(
@@ -69,28 +58,31 @@ DROP TABLE IF EXISTS peer;
 DROP TABLE IF EXISTS role;
 )";
 
-        pqxx::connection connection(pgopt_);
+        pqxx::connection connection(config_->postgres().options());
         pqxx::work txn(connection);
         txn.exec(drop);
         txn.commit();
         connection.disconnect();
 
         cpp_redis::redis_client client;
-        client.connect(redishost_, redisport_);
+        client.connect(config_->redis().host, config_->redis().port);
         client.flushall();
         client.sync_commit();
         client.disconnect();
 
-        iroha::remove_all(block_store_path);
+        iroha::remove_all(config_->blockStorage().path);
       }
 
-      std::string pgopt_ =
-          "host=localhost port=5432 user=postgres password=mysecretpassword";
+      std::unique_ptr<iroha::config::Config> config_;
 
-      std::string redishost_ = "localhost";
-      size_t redisport_ = 6379;
-
-      std::string block_store_path = "/tmp/block_store";
+      //      std::string pgopt_ =
+      //          "host=localhost port=5432 user=postgres
+      //          password=mysecretpassword";
+      //
+      //      std::string redishost_ = "localhost";
+      //      size_t redisport_ = 6379;
+      //
+      //      std::string block_store_path = "/tmp/block_store";
     };
   }  // namespace ametsuchi
 }  // namespace iroha

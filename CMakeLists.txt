@@ -10,7 +10,7 @@ PROJECT(iroha C CXX)
 
 SET(CMAKE_CXX_FLAGS "-std=c++1y -Wall -fPIC")
 SET(CMAKE_CXX_FLAGS_RELEASE "-O3")
-SET(CMAKE_CXX_FLAGS_DEBUG   "-g -Wextra -Wno-unused-parameter -O0")
+SET(CMAKE_CXX_FLAGS_DEBUG   "-g -Wextra -Wno-unused-parameter -O0 -fdiagnostics-color")
 SET(CMAKE_CXX_OUTPUT_EXTENSION_REPLACE 1)
 
 if(COVERAGE)
@@ -31,6 +31,11 @@ option(BENCHMARKING "Build benchmarks" OFF)
 option(TESTING "Build tests" ON)
 option(COVERAGE "Enable coverage" OFF)
 option(FUZZING "Build fuzzing binaries" OFF)
+option(IROHA_VERSION "Set version" OFF)
+
+if(VERSION)
+  add_definitions(-DIROHA_VERSION=${IROHA_VERSION})
+endif()
 
 if (NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Debug)

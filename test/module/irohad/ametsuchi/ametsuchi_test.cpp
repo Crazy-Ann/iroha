@@ -38,8 +38,8 @@ using namespace framework::test_subscriber;
 
 TEST_F(AmetsuchiTest, GetBlocksCompletedWhenCalled) {
   // Commit block => get block => observable completed
-  auto storage =
-      StorageImpl::create(block_store_path, redishost_, redisport_, pgopt_);
+  auto storage = StorageImpl::create(config_->redis(), config_->postgres(),
+                                     config_->blockStorage());
   ASSERT_TRUE(storage);
   auto blocks = storage->getBlockQuery();
 
@@ -57,8 +57,8 @@ TEST_F(AmetsuchiTest, GetBlocksCompletedWhenCalled) {
 }
 
 TEST_F(AmetsuchiTest, SampleTest) {
-  auto storage =
-      StorageImpl::create(block_store_path, redishost_, redisport_, pgopt_);
+  auto storage = StorageImpl::create(config_->redis(), config_->postgres(),
+                                     config_->blockStorage());
   ASSERT_TRUE(storage);
   auto wsv = storage->getWsvQuery();
   auto blocks = storage->getBlockQuery();
@@ -90,8 +90,8 @@ TEST_F(AmetsuchiTest, SampleTest) {
   }
 
   {
-    auto account = wsv->getAccount(createAccount.account_name + "@" +
-                                       createAccount.domain_id);
+    auto account = wsv->getAccount(createAccount.account_name + "@"
+                                   + createAccount.domain_id);
     ASSERT_TRUE(account);
     ASSERT_EQ(account->account_id,
               createAccount.account_name + "@" + createAccount.domain_id);
@@ -165,15 +165,15 @@ TEST_F(AmetsuchiTest, SampleTest) {
   blocks->getAccountTransactions("admin2").subscribe(
       [](auto tx) { EXPECT_EQ(tx.commands.size(), 4); });
 
-  blocks->getAccountAssetTransactions("user1@ru", "RUB#ru").subscribe(
-      [](auto tx) { EXPECT_EQ(tx.commands.size(), 1); });
-  blocks->getAccountAssetTransactions("user2@ru", "RUB#ru").subscribe(
-      [](auto tx) { EXPECT_EQ(tx.commands.size(), 1); });
+  blocks->getAccountAssetTransactions("user1@ru", "RUB#ru")
+      .subscribe([](auto tx) { EXPECT_EQ(tx.commands.size(), 1); });
+  blocks->getAccountAssetTransactions("user2@ru", "RUB#ru")
+      .subscribe([](auto tx) { EXPECT_EQ(tx.commands.size(), 1); });
 }
 
 TEST_F(AmetsuchiTest, PeerTest) {
-  auto storage =
-      StorageImpl::create(block_store_path, redishost_, redisport_, pgopt_);
+  auto storage = StorageImpl::create(config_->redis(), config_->postgres(),
+                                     config_->blockStorage());
   ASSERT_TRUE(storage);
   auto wsv = storage->getWsvQuery();
 
@@ -200,7 +200,8 @@ TEST_F(AmetsuchiTest, PeerTest) {
 }
 
 TEST_F(AmetsuchiTest, queryGetAccountAssetTransactionsTest) {
-  auto storage = StorageImpl::create(block_store_path, redishost_, redisport_, pgopt_);
+  auto storage = StorageImpl::create(config_->redis(), config_->postgres(),
+                                     config_->blockStorage());
   ASSERT_TRUE(storage);
   auto wsv = storage->getWsvQuery();
   auto blocks = storage->getBlockQuery();
@@ -387,15 +388,16 @@ TEST_F(AmetsuchiTest, queryGetAccountAssetTransactionsTest) {
   }
 
   // Block store tests
-  blocks->getBlocks(1, 3).subscribe([block1hash, block2hash, block3hash](auto eachBlock) {
-    if (eachBlock.height == 1) {
-      EXPECT_EQ(eachBlock.hash, block1hash);
-    } else if (eachBlock.height == 2) {
-      EXPECT_EQ(eachBlock.hash, block2hash);
-    } else if (eachBlock.height == 3) {
-      EXPECT_EQ(eachBlock.hash, block3hash);
-    }
-  });
+  blocks->getBlocks(1, 3).subscribe(
+      [block1hash, block2hash, block3hash](auto eachBlock) {
+        if (eachBlock.height == 1) {
+          EXPECT_EQ(eachBlock.hash, block1hash);
+        } else if (eachBlock.height == 2) {
+          EXPECT_EQ(eachBlock.hash, block2hash);
+        } else if (eachBlock.height == 3) {
+          EXPECT_EQ(eachBlock.hash, block3hash);
+        }
+      });
 
   blocks->getAccountTransactions(admin).subscribe(
       [](auto tx) { EXPECT_EQ(tx.commands.size(), 8); });
@@ -409,22 +411,29 @@ TEST_F(AmetsuchiTest, queryGetAccountAssetTransactionsTest) {
   // (user1 -> user2 # asset1)
   // (user2 -> user3 # asset2)
   // (user2 -> user1 # asset2)
-  blocks->getAccountAssetTransactions(user1id, asset1id).subscribe(
-      [](auto tx) { EXPECT_EQ(tx.commands.size(), 1); });
-  blocks->getAccountAssetTransactions(user2id, asset1id).subscribe(
-      [](auto tx) { EXPECT_EQ(tx.commands.size(), 1); });
-  blocks->getAccountAssetTransactions(user3id, asset1id).subscribe(
-      [](auto tx) { EXPECT_EQ(tx.commands.size(), 0); });
-  blocks->getAccountAssetTransactions(user1id, asset2id).subscribe(
-      [](auto tx) { EXPECT_EQ(tx.commands.size(), 1); });
-  blocks->getAccountAssetTransactions(user2id, asset2id).subscribe(
-      [](auto tx) { EXPECT_EQ(tx.commands.size(), 2); });
-  blocks->getAccountAssetTransactions(user3id, asset2id).subscribe(
-      [](auto tx) { EXPECT_EQ(tx.commands.size(), 1); });
+  blocks->getAccountAssetTransactions(user1id, asset1id).subscribe([](auto tx) {
+    EXPECT_EQ(tx.commands.size(), 1);
+  });
+  blocks->getAccountAssetTransactions(user2id, asset1id).subscribe([](auto tx) {
+    EXPECT_EQ(tx.commands.size(), 1);
+  });
+  blocks->getAccountAssetTransactions(user3id, asset1id).subscribe([](auto tx) {
+    EXPECT_EQ(tx.commands.size(), 0);
+  });
+  blocks->getAccountAssetTransactions(user1id, asset2id).subscribe([](auto tx) {
+    EXPECT_EQ(tx.commands.size(), 1);
+  });
+  blocks->getAccountAssetTransactions(user2id, asset2id).subscribe([](auto tx) {
+    EXPECT_EQ(tx.commands.size(), 2);
+  });
+  blocks->getAccountAssetTransactions(user3id, asset2id).subscribe([](auto tx) {
+    EXPECT_EQ(tx.commands.size(), 1);
+  });
 }
 
 TEST_F(AmetsuchiTest, AddSignatoryTest) {
-  auto storage = StorageImpl::create(block_store_path, redishost_, redisport_, pgopt_);
+  auto storage = StorageImpl::create(config_->redis(), config_->postgres(),
+                                     config_->blockStorage());
   ASSERT_TRUE(storage);
   auto wsv = storage->getWsvQuery();
 
@@ -514,7 +523,7 @@ TEST_F(AmetsuchiTest, AddSignatoryTest) {
   createAccount = CreateAccount();
   createAccount.account_name = "user2";
   createAccount.domain_id = "domain";
-  createAccount.pubkey = pubkey1; // same as user1's pubkey1
+  createAccount.pubkey = pubkey1;  // same as user1's pubkey1
   txn.commands.push_back(std::make_shared<CreateAccount>(createAccount));
 
   block = Block();

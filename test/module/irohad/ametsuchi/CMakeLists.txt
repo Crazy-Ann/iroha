@@ -2,18 +2,21 @@ addtest(ametsuchi_test ametsuchi_test.cpp)
 target_link_libraries(ametsuchi_test
     ametsuchi
     libs_common
+    irohad-config
     )
 
 addtest(wsv_query_command_test wsv_query_command_test.cpp)
 target_link_libraries(wsv_query_command_test
     ametsuchi
     libs_common
+    irohad-config
     )
 
 addtest(flat_file_test flat_file_test.cpp)
 target_link_libraries(flat_file_test
     ametsuchi
     libs_common
+    irohad-config
     )
 
 addtest(testing_storage_test testing_storage_test.cpp)
@@ -21,6 +24,7 @@ target_link_libraries(testing_storage_test
     ametsuchi
     test_block_generator
     libs_common
+    irohad-config
     )
 
 add_library(ametsuchi_fixture INTERFACE)

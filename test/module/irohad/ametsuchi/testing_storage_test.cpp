@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
+#include "ametsuchi/impl/test_storage_impl.hpp"
+#include "crypto/hash.hpp"
 #include "gtest/gtest.h"
 #include "logger/logger.hpp"
-#include "crypto/hash.hpp"
-#include "ametsuchi/impl/test_storage_impl.hpp"
 #include "module/irohad/ametsuchi/ametsuchi_fixture.hpp"
 
 #include "model/commands/add_asset_quantity.hpp"
@@ -33,10 +33,7 @@ using namespace iroha::ametsuchi;
 using namespace iroha::model;
 
 class TestStorageFixture : public AmetsuchiTest {
-
-  void TearDown() override {
-  }
-
+  void TearDown() override {}
 };
 
 Block getBlock() {
@@ -57,11 +54,13 @@ Block getBlock() {
 
 TEST_F(TestStorageFixture, TestingStorageWhenInsertBlock) {
   auto log = logger::testLog("TestStorage");
-  log->info("Test case: create storage "
-                "=> insert block "
-                "=> assert that inserted");
-  auto storage =
-      TestStorageImpl::create(block_store_path, redishost_, redisport_, pgopt_);
+  log->info(
+      "Test case: create storage "
+      "=> insert block "
+      "=> assert that inserted");
+
+  auto storage = TestStorageImpl::create(config_->redis(), config_->postgres(),
+                                         config_->blockStorage());
   ASSERT_TRUE(storage);
   auto wsv = storage->getWsvQuery();
   ASSERT_EQ(0, wsv->getPeers().value().size());
@@ -82,18 +81,20 @@ TEST_F(TestStorageFixture, TestingStorageWhenInsertBlock) {
 
 TEST_F(TestStorageFixture, TestingStorageWhenDropAll) {
   auto logger = logger::testLog("TestStorage");
-  logger->info("Test case: create storage "
-                   "=> insert block "
-                   "=> assert that written"
-                   " => drop all "
-                   "=> assert that all deleted ");
+  logger->info(
+      "Test case: create storage "
+      "=> insert block "
+      "=> assert that written"
+      " => drop all "
+      "=> assert that all deleted ");
 
   auto log = logger::testLog("TestStorage");
-  log->info("Test case: create storage "
-                "=> insert block "
-                "=> assert that inserted");
-  auto storage =
-      TestStorageImpl::create(block_store_path, redishost_, redisport_, pgopt_);
+  log->info(
+      "Test case: create storage "
+      "=> insert block "
+      "=> assert that inserted");
+  auto storage = TestStorageImpl::create(config_->redis(), config_->postgres(),
+                                         config_->blockStorage());
   ASSERT_TRUE(storage);
   auto wsv = storage->getWsvQuery();
   ASSERT_EQ(0, wsv->getPeers().value().size());
@@ -112,8 +113,8 @@ TEST_F(TestStorageFixture, TestingStorageWhenDropAll) {
   storage->dropStorage();
 
   ASSERT_EQ(0, wsv->getPeers().value().size());
-  auto new_storage =
-      TestStorageImpl::create(block_store_path, redishost_, redisport_, pgopt_);
+  auto new_storage = TestStorageImpl::create(
+      config_->redis(), config_->postgres(), config_->blockStorage());
   ASSERT_EQ(0, wsv->getPeers().value().size());
   new_storage->dropStorage();
 }

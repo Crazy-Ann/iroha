@@ -15,43 +15,39 @@
  * limitations under the License.
  */
 
-#include <utility>
 #include "ametsuchi/impl/test_storage_impl.hpp"
+#include <utility>
 #include "common/files.hpp"
 
 namespace iroha {
   namespace ametsuchi {
 
     std::shared_ptr<TestStorageImpl> TestStorageImpl::create(
-        std::string block_store_dir,
-        std::string redis_host,
-        std::size_t redis_port,
-        std::string postgres_options) {
+        const Config::Redis &redis,
+        const Config::Postgres &pg,
+        const Config::BlockStorage &store) {
+      auto ctx = initConnections(redis, pg, store);
 
-      auto ctx = initConnections(block_store_dir,
-                                 redis_host,
-                                 redis_port,
-                                 postgres_options);
-
-      return std::shared_ptr<TestStorageImpl>(
-          new TestStorageImpl(block_store_dir,
-                              redis_host, redis_port,
-                              postgres_options,
-                              std::move(ctx->block_store),
-                              std::move(ctx->index),
-                              std::move(ctx->pg_lazy),
-                              std::move(ctx->pg_nontx)));
+      return std::shared_ptr<TestStorageImpl>(new TestStorageImpl(
+          redis, pg, store, std::move(ctx->block_store), std::move(ctx->index),
+          std::move(ctx->pg_lazy), std::move(ctx->pg_nontx)));
     }
 
     TestStorageImpl::TestStorageImpl(
-        std::string block_store_dir, std::string redis_host, size_t redis_port,
-        std::string postgres_options, std::unique_ptr<FlatFile> block_store,
+        const Config::Redis &redis,
+        const Config::Postgres &pg,
+        const Config::BlockStorage &store,
+        std::unique_ptr<FlatFile> block_store,
         std::unique_ptr<cpp_redis::redis_client> index,
         std::unique_ptr<pqxx::lazyconnection> wsv_connection,
         std::unique_ptr<pqxx::nontransaction> wsv_transaction)
-        : StorageImpl(block_store_dir, redis_host, redis_port, postgres_options,
-                      std::move(block_store), std::move(index),
-                      std::move(wsv_connection), std::move(wsv_transaction)) {
+        : StorageImpl(redis,
+                      pg,
+                      store,
+                      std::move(block_store),
+                      std::move(index),
+                      std::move(wsv_connection),
+                      std::move(wsv_transaction)) {
       log_ = logger::log("TestStorage");
     }
 
@@ -82,14 +78,15 @@ DROP TABLE IF EXISTS peer;
 DROP TABLE IF EXISTS role;
 )";
 
+      const auto pgoptions = postgres_.options();
       // erase db
       log_->info("drop dp");
-      pqxx::connection connection(postgres_options_);
+      pqxx::connection connection(pgoptions);
       pqxx::work txn(connection);
       txn.exec(drop);
       txn.commit();
 
-      pqxx::connection init_connection(postgres_options_);
+      pqxx::connection init_connection(pgoptions);
       pqxx::work init_txn(connection);
       init_txn.exec(init_);
       init_txn.commit();
@@ -97,13 +94,13 @@ DROP TABLE IF EXISTS role;
       // erase tx index
       log_->info("drop redis");
       cpp_redis::redis_client client;
-      client.connect(redis_host_, redis_port_);
+      client.connect(redis_.host, redis_.port);
       client.flushall();
       client.sync_commit();
 
       // erase blocks
       log_->info("drop block store");
-      remove_all(block_store_dir_);
+      remove_all(store_.path);
     }
 
     // ----------| StorageImpl |----------
@@ -116,7 +113,8 @@ DROP TABLE IF EXISTS role;
       return StorageImpl::createMutableStorage();
     }
 
-    void TestStorageImpl::commit(std::unique_ptr<MutableStorage> mutableStorage) {
+    void TestStorageImpl::commit(
+        std::unique_ptr<MutableStorage> mutableStorage) {
       return StorageImpl::commit(std::move(mutableStorage));
     }
 
