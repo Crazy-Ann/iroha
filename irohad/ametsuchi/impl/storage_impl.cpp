@@ -27,16 +27,16 @@ namespace iroha {
   namespace ametsuchi {
 
     StorageImpl::StorageImpl(
-        const Config::Redis &redis,
-        const Config::Postgres &pg,
-        const Config::BlockStorage &store,
+        const Config::Redis &redisConf,
+        const Config::Postgres &pgConf,
+        const Config::BlockStorage &storeConf,
         std::unique_ptr<FlatFile> block_store,
         std::unique_ptr<cpp_redis::redis_client> index,
         std::unique_ptr<pqxx::lazyconnection> wsv_connection,
         std::unique_ptr<pqxx::nontransaction> wsv_transaction)
-        : redis_(redis),
-          postgres_(pg),
-          store_(store),
+        : redisConfig_(redisConf),
+          postgresConfig_(pgConf),
+          storeConfig_(storeConf),
           block_store_(std::move(block_store)),
           index_(std::move(index)),
           wsv_connection_(std::move(wsv_connection)),
@@ -58,7 +58,7 @@ namespace iroha {
       }
 
       auto postgres_connection =
-          std::make_unique<pqxx::lazyconnection>(postgres_.options());
+          std::make_unique<pqxx::lazyconnection>(postgresConfig_.options());
 
       try {
         postgres_connection->activate();
@@ -70,7 +70,8 @@ namespace iroha {
           *postgres_connection, "TemporaryWsv");
 
       return std::make_unique<TemporaryWsvImpl>(
-          std::move(postgres_connection), std::move(wsv_transaction),
+          std::move(postgres_connection),
+          std::move(wsv_transaction),
           std::move(command_executors.value()));
     }
 
@@ -82,7 +83,7 @@ namespace iroha {
       }
 
       auto postgres_connection =
-          std::make_unique<pqxx::lazyconnection>(postgres_.options());
+          std::make_unique<pqxx::lazyconnection>(postgresConfig_.options());
       try {
         postgres_connection->activate();
       } catch (const pqxx::broken_connection &e) {
@@ -94,7 +95,7 @@ namespace iroha {
 
       auto index = std::make_unique<cpp_redis::redis_client>();
       try {
-        index->connect(redis_.host, redis_.port);
+        index->connect(redisConfig_.host, redisConfig_.port);
       } catch (const cpp_redis::redis_error &e) {
         log_->error("Connection to Redis broken: {}", e.what());
         return nullptr;
@@ -108,8 +109,10 @@ namespace iroha {
           .subscribe([&top_hash](auto block) { top_hash = block.hash; });
 
       return std::make_unique<MutableStorageImpl>(
-          top_hash.value_or(hash256_t{}), std::move(index),
-          std::move(postgres_connection), std::move(wsv_transaction),
+          top_hash.value_or(hash256_t{}),
+          std::move(index),
+          std::move(postgres_connection),
+          std::move(wsv_transaction),
           std::move(command_executors.value()));
     }
 
@@ -131,8 +134,8 @@ namespace iroha {
       try {
         index->connect(redis.host, redis.port);
       } catch (const cpp_redis::redis_error &e) {
-        log_->error("Connection {}:{} with Redis is broken", redis.host,
-                    redis.port);
+        log_->error(
+            "Connection {}:{} with Redis is broken", redis.host, redis.port);
         return nonstd::nullopt;
       }
 
@@ -153,8 +156,10 @@ namespace iroha {
       log_->info("transaction to PostgreSQL initialized");
 
       return nonstd::make_optional<ConnectionContext>(
-          std::move(block_store), std::move(index),
-          std::move(postgres_connection), std::move(wsv_transaction));
+          std::move(block_store),
+          std::move(index),
+          std::move(postgres_connection),
+          std::move(wsv_transaction));
     }
 
     std::shared_ptr<StorageImpl> StorageImpl::create(
@@ -166,9 +171,14 @@ namespace iroha {
         return nullptr;
       }
 
-      return std::shared_ptr<StorageImpl>(new StorageImpl(
-          redis, pg, store, std::move(ctx->block_store), std::move(ctx->index),
-          std::move(ctx->pg_lazy), std::move(ctx->pg_nontx)));
+      return std::shared_ptr<StorageImpl>(
+          new StorageImpl(redis,
+                          pg,
+                          store,
+                          std::move(ctx->block_store),
+                          std::move(ctx->index),
+                          std::move(ctx->pg_lazy),
+                          std::move(ctx->pg_nontx)));
     }
 
     void StorageImpl::commit(std::unique_ptr<MutableStorage> mutableStorage) {
@@ -179,8 +189,9 @@ namespace iroha {
       for (const auto &entry : storage->block_store_) {
         auto &id = entry.first;
         auto &block = entry.second;
-        block_store_->add(id, stringToBytes(model::converters::jsonToString(
-                                  serializer_.serialize(block))));
+        block_store_->add(id,
+                          stringToBytes(model::converters::jsonToString(
+                              serializer_.serialize(block))));
       }
 
       storage->index_->exec();

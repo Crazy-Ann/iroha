@@ -76,17 +76,17 @@ namespace iroha {
       std::shared_ptr<BlockQuery> getBlockQuery() const override;
 
      protected:
-      StorageImpl(const Config::Redis &redis,
-                  const Config::Postgres &pg,
-                  const Config::BlockStorage &store,
+      StorageImpl(const Config::Redis &redisConf,
+                  const Config::Postgres &pgConf,
+                  const Config::BlockStorage &storeConf,
                   std::unique_ptr<FlatFile> block_store,
                   std::unique_ptr<cpp_redis::redis_client> index,
                   std::unique_ptr<pqxx::lazyconnection> wsv_connection,
                   std::unique_ptr<pqxx::nontransaction> wsv_transaction);
 
-      const Config::Redis redis_;
-      const Config::Postgres postgres_;
-      const Config::BlockStorage store_;
+      const Config::Redis redisConfig_;
+      const Config::Postgres postgresConfig_;
+      const Config::BlockStorage storeConfig_;
 
      private:
       std::unique_ptr<FlatFile> block_store_;

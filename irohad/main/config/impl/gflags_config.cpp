@@ -16,7 +16,6 @@
  */
 
 #include "gflags_config.hpp"
-#include <sstream>
 #include "main/config/flags.hpp"
 
 namespace iroha {

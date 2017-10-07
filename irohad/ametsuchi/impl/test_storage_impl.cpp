@@ -78,7 +78,7 @@ DROP TABLE IF EXISTS peer;
 DROP TABLE IF EXISTS role;
 )";
 
-      const auto pgoptions = postgres_.options();
+      const auto pgoptions = postgresConfig_.options();
       // erase db
       log_->info("drop dp");
       pqxx::connection connection(pgoptions);
@@ -94,13 +94,13 @@ DROP TABLE IF EXISTS role;
       // erase tx index
       log_->info("drop redis");
       cpp_redis::redis_client client;
-      client.connect(redis_.host, redis_.port);
+      client.connect(redisConfig_.host, redisConfig_.port);
       client.flushall();
       client.sync_commit();
 
       // erase blocks
       log_->info("drop block store");
-      remove_all(store_.path);
+      remove_all(storeConfig_.path);
     }
 
     // ----------| StorageImpl |----------

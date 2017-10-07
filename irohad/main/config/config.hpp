@@ -18,8 +18,8 @@
 #ifndef IROHA_CONFIG_HPP_
 #define IROHA_CONFIG_HPP_
 
-#include <sstream>
 #include <string>
+#include <sstream>
 
 namespace iroha {
   namespace config {
