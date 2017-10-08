@@ -65,4 +65,4 @@ namespace iroha_cli {
     return response;
   }
 
-};  // namespace iroha_cli
+} // namespace iroha_cli

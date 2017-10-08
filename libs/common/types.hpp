@@ -279,6 +279,9 @@ namespace iroha {
   struct keypair_t {
     pubkey_t pubkey;
     privkey_t privkey;
+
+    keypair_t() = default;
+    keypair_t(pubkey_t pubkey, privkey_t privkey): pubkey(pubkey), privkey(privkey) {}
   };
 
   // timestamps

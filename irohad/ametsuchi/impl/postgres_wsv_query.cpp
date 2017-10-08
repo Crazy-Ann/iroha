@@ -48,7 +48,7 @@ namespace iroha {
         return false;
       }
       return result.size() == 1;
-    };
+    }
 
     nonstd::optional<std::vector<std::string>>
     PostgresWsvQuery::getAccountRoles(const std::string &account_id) {
@@ -66,7 +66,7 @@ namespace iroha {
         roles.emplace_back(row.at("role_id").c_str());
       }
       return roles;
-    };
+    }
 
     nonstd::optional<std::vector<std::string>>
     PostgresWsvQuery::getRolePermissions(const std::string &role_name) {
@@ -84,7 +84,7 @@ namespace iroha {
         permissions.emplace_back(row.at("permission_id").c_str());
       }
       return permissions;
-    };
+    }
 
     nonstd::optional<std::vector<std::string>> PostgresWsvQuery::getRoles() {
       pqxx::result result;
@@ -99,7 +99,7 @@ namespace iroha {
         roles.emplace_back(row.at("role_id").c_str());
       }
       return roles;
-    };
+    }
 
     optional<Account> PostgresWsvQuery::getAccount(const string &account_id) {
       pqxx::result result;

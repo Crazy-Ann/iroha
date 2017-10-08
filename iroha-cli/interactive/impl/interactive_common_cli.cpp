@@ -23,20 +23,20 @@ namespace iroha_cli {
     DescriptionMap getCommonDescriptionMap() {
       return {{SAVE_CODE, "Save as json file"},
               {SEND_CODE, "Send to Iroha peer"}};
-    };
+    }
 
     ParamsMap getCommonParamsMap() {
       return {{SAVE_CODE, {"Path to save json file"}},
               {SEND_CODE, {"Peer address", "Peer port"}}};
-    };
+    }
 
     void handleEmptyCommand() {
       std::cout << "Put not empty command" << std::endl;
-    };
+    }
 
     void handleUnknownCommand(std::string &command) {
       std::cout << "Command not found: " << command << std::endl;
-    };
+    }
 
     void addBackOption(MenuPoints &menu) {
       menu.push_back("0. Back (" + BACK_CODE + ")");
@@ -46,7 +46,7 @@ namespace iroha_cli {
       auto command = parser::parseFirstCommand(line);
       return command.has_value() &&
              (command.value() == "0" || command.value() == BACK_CODE);
-    };
+    }
 
     void printCommandParameters(std::string &command,
                                 std::vector<std::string> parameters) {
@@ -54,13 +54,13 @@ namespace iroha_cli {
                 << " with following parameters: " << std::endl;
       std::for_each(parameters.begin(), parameters.end(),
                     [](auto el) { std::cout << "  " << el << std::endl; });
-    };
+    }
 
     void printMenu(const std::string &message, MenuPoints menu_points) {
       std::cout << message << std::endl;
       std::for_each(menu_points.begin(), menu_points.end(),
                     [](auto el) { std::cout << el << std::endl; });
-    };
+    }
 
     std::string promtString(const std::string &message) {
       std::string line;
@@ -69,7 +69,7 @@ namespace iroha_cli {
       return line;
     }
 
-    void printEnd() { std::cout << "--------------------" << std::endl; };
+    void printEnd() { std::cout << "--------------------" << std::endl; }
 
     nonstd::optional<std::pair<std::string, uint16_t>> parseIrohaPeerParams(
         ParamsDescription params) {

@@ -24,20 +24,20 @@ namespace iroha {
       YacPeerOrdererImpl::YacPeerOrdererImpl(
           std::shared_ptr<ametsuchi::PeerQuery> wsv)
           : wsv_(std::move(wsv)) {
-      };
+      }
 
       nonstd::optional<ClusterOrdering>
       YacPeerOrdererImpl::getInitialOrdering() {
         auto peers = wsv_->getLedgerPeers();
         if(not peers.has_value()) return nonstd::nullopt;
         return ClusterOrdering(peers.value());
-      };
+      }
 
       nonstd::optional<ClusterOrdering>
       YacPeerOrdererImpl::getOrdering(YacHash hash) {
         // todo make shuffling with proposal_hash seed
         return getInitialOrdering();
-      };
+      }
     }  // namespace yac
   }    // namespace consensus
 }  // namespace iroha

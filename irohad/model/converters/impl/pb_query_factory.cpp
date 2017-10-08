@@ -100,7 +100,6 @@ namespace iroha {
             }
             case Query_Payload::QueryCase::kGetRoles: {
               // Convert to get Roles
-              const auto &pb_cast = pl.get_roles();
               val = std::make_shared<GetRoles>();
               break;
             }
@@ -166,7 +165,7 @@ namespace iroha {
         auto pb_query_mut = pl->mutable_get_account();
         pb_query_mut->set_account_id(account_id);
         return pb_query;
-      };
+      }
 
       protocol::Query PbQueryFactory::serializeGetAccountAssets(
           std::shared_ptr<const Query> query) const {
@@ -178,7 +177,7 @@ namespace iroha {
         pb_query_mut->set_account_id(tmp->account_id);
         pb_query_mut->set_asset_id(tmp->asset_id);
         return pb_query;
-      };
+      }
 
       protocol::Query PbQueryFactory::serializeGetAccountTransactions(
           std::shared_ptr<const Query> query) const {
@@ -233,7 +232,8 @@ namespace iroha {
       protocol::Query PbQueryFactory::serializeGetRoles(
           std::shared_ptr<const Query> query) const {
         protocol::Query pb_query;
-        auto mut = pb_query.mutable_payload()->mutable_get_roles();
+        // GetRoles can in future get some field, then use:
+        // auto mut = pb_query.mutable_payload()->mutable_get_roles();
         serializeQueryMetaData(pb_query, query);
         auto tmp = std::static_pointer_cast<const GetRoles>(query);
         return pb_query;
