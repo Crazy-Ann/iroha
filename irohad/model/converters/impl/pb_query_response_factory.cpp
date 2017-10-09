@@ -85,21 +85,6 @@ namespace iroha {
         pb_account.set_quorum(account.quorum);
         pb_account.set_account_id(account.account_id);
         pb_account.set_domain_name(account.domain_name);
-        /*
-        auto permissions = pb_account.mutable_permissions();
-        permissions->set_set_quorum(account.permissions.set_quorum);
-        permissions->set_set_permissions(account.permissions.set_permissions);
-        permissions->set_remove_signatory(account.permissions.remove_signatory);
-        permissions->set_read_all_accounts(
-            account.permissions.read_all_accounts);
-        permissions->set_issue_assets(account.permissions.issue_assets);
-        permissions->set_create_domains(account.permissions.create_domains);
-        permissions->set_create_accounts(account.permissions.create_accounts);
-        permissions->set_create_assets(account.permissions.create_assets);
-        permissions->set_can_transfer(account.permissions.can_transfer);
-        permissions->set_add_signatory(account.permissions.add_signatory);
-         */
-
         return pb_account;
       }
 

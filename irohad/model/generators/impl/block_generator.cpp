@@ -18,6 +18,7 @@
 #include "crypto/hash.hpp"
 #include "model/generators/block_generator.hpp"
 #include <chrono>
+#include "datetime/time.hpp"
 
 namespace iroha {
   namespace model {

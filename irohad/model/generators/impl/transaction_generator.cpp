@@ -31,7 +31,6 @@ namespace iroha {
         tx.created_ts = timestamp;
         tx.creator_account_id = "";
         tx.tx_counter = 0;
-
         CommandGenerator command_generator;
         // Add peers
         for (size_t i = 0; i < peers_address.size(); ++i) {
@@ -44,8 +43,13 @@ namespace iroha {
         // Create admin role
         tx.commands.push_back(
             command_generator.generateCreateAdminRole("admin"));
+        // Create user role
+        tx.commands.push_back(command_generator.generateCreateUserRole("user"));
+        tx.commands.push_back(
+            command_generator.generateCreateAssetCreatorRole("money_creator"));
         // Add domain
-        tx.commands.push_back(command_generator.generateCreateDomain("test", "admin"));
+        tx.commands.push_back(
+            command_generator.generateCreateDomain("test", "user"));
         // Create accounts
         auto acc_key = generator::random_blob<pubkey_t::size()>(1);
         tx.commands.push_back(
@@ -57,6 +61,10 @@ namespace iroha {
         auto precision = 2;
         tx.commands.push_back(
             command_generator.generateCreateAsset("coin", "test", precision));
+        tx.commands.push_back(
+            std::make_shared<AppendRole>("admin@test", "admin"));
+        tx.commands.push_back(
+            std::make_shared<AppendRole>("admin@test", "money_creator"));
         return tx;
       }
 

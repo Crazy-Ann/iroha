@@ -48,7 +48,7 @@ namespace iroha {
     bool CommandExecutor::validate(const Command &command, WsvQuery &queries,
                                    const Account &creator) {
       return hasPermissions(command, queries, creator)
-          && isValid(command, queries);
+          and isValid(command, queries);
     }
 
     // ----------------------------| Append Role |-----------------------------

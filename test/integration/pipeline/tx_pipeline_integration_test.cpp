@@ -78,7 +78,7 @@ class TestIrohad : public Irohad {
 class TxPipelineIntegrationTest : public iroha::ametsuchi::AmetsuchiTest {
  public:
   TxPipelineIntegrationTest() {
-    //spdlog::set_level(spdlog::level::off);
+    spdlog::set_level(spdlog::level::off);
   }
 
   void SetUp() override {

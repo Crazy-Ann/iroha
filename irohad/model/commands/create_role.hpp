@@ -18,7 +18,7 @@
 #define IROHA_CREATE_ROLE_HPP
 
 #include <string>
-#include <set>
+#include <unordered_set>
 #include "model/command.hpp"
 
 namespace iroha {
@@ -36,14 +36,14 @@ namespace iroha {
       /**
        * Role permissions
        */
-      std::set<std::string> permissions;
+      std::unordered_set<std::string> permissions;
 
       bool operator==(const Command &command) const override;
 
       CreateRole() {}
 
       CreateRole(const std::string &role_name_,
-                 const std::set<std::string> &perms)
+                 const std::unordered_set<std::string> &perms)
           : role_name(role_name_), permissions(perms) {}
     };
   }  // namespace model
